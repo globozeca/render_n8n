@@ -1,0 +1,127 @@
+# ==========================================================
+# STACK: n8n + Evolution API + PostgreSQL + Redis + Supabase
+# Ambiente: Render Free Tier (otimizado para uso contínuo)
+# Repo: zecaia-n8n-evolution
+# ==========================================================
+
+services:
+  - type: web
+    name: evolution-api
+    env: docker
+    plan: free
+    dockerfilePath: ./evolution-api/Dockerfile
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
+      - key: SUPABASE_URL
+        value: https://tua-instancia.supabase.co
+      - key: SUPABASE_KEY
+        value: "coloca_tua_supabase_key_aqui"
+      - key: API_KEY
+        value: "coloca_tua_chave_de_autenticacao_aqui"
+      - key: ALLOWED_ORIGINS
+        value: "*"
+    autoDeploy: true
+    healthCheckPath: /
+    region: frankfurt
+    buildCommand: |
+      echo "Starting Evolution API build..."
+    startCommand: |
+      npm run start
+
+  - type: web
+    name: n8n
+    env: docker
+    plan: free
+    dockerfilePath: ./n8n/Dockerfile
+    envVars:
+      - key: N8N_PORT
+        value: 5678
+      - key: WEBHOOK_URL
+        value: https://n8n-zecaia-render.onrender.com
+      - key: N8N_ENCRYPTION_KEY
+        value: "gera_uma_chave_segura_aqui"
+      - key: NODE_ENV
+        value: production
+      - key: N8N_USER_MANAGEMENT_DISABLED
+        value: "true"
+      - key: N8N_BASIC_AUTH_ACTIVE
+        value: "true"
+      - key: N8N_BASIC_AUTH_USER
+        value: "admin"
+      - key: N8N_BASIC_AUTH_PASSWORD
+        value: "coloca_uma_senha_segura_aqui"
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_HOST
+        fromService:
+          type: pserv
+          name: postgres
+          property: host
+      - key: DB_POSTGRESDB_PORT
+        fromService:
+          type: pserv
+          name: postgres
+          property: port
+      - key: DB_POSTGRESDB_DATABASE
+        value: n8n
+      - key: DB_POSTGRESDB_USER
+        fromService:
+          type: pserv
+          name: postgres
+          property: user
+      - key: DB_POSTGRESDB_PASSWORD
+        fromService:
+          type: pserv
+          name: postgres
+          property: password
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
+      - key: EXECUTIONS_PROCESS
+        value: main
+      - key: GENERIC_TIMEZONE
+        value: Africa/Luanda
+      - key: EVOLUTION_API_URL
+        value: https://evolution-api.onrender.com
+      - key: SUPABASE_URL
+        value: https://tua-instancia.supabase.co
+      - key: SUPABASE_KEY
+        value: "coloca_tua_supabase_key_aqui"
+      - key: OPENAI_API_KEY
+        value: "coloca_tua_chave_openai_ou_outro_modelo_aqui"
+    autoDeploy: true
+    healthCheckPath: /
+    region: frankfurt
+    buildCommand: |
+      echo "Building n8n..."
+    startCommand: |
+      n8n start
+
+  - type: pserv
+    name: postgres
+    env: docker
+    plan: free
+    disk:
+      name: data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 1
+
+  - type: redis
+    name: redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
