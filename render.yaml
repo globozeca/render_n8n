@@ -41,8 +41,7 @@ services:
     region: frankfurt
     buildCommand: |
       echo "Building Evolution API..."
-    startCommand: |
-      npm run start
+ 
 
   # -------------------------------
   # N8N
@@ -131,8 +130,7 @@ services:
     region: frankfurt
     buildCommand: |
       echo "Building n8n..."
-    startCommand: |
-      n8n start --tunnel
+
 
   # -------------------------------
   # POSTGRES
