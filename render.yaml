@@ -31,7 +31,7 @@ services:
       - key: ALLOWED_ORIGINS
         value: "*"
     autoDeploy: true
-    region: frankfurt
+    region: oregon
     buildCommand: echo "Building Evolution API..."
 
   - type: web
@@ -88,7 +88,7 @@ services:
       - key: OPENAI_API_KEY
         value: coloca_tua_chave_openai_ou_outro_modelo_aqui
     autoDeploy: true
-    region: frankfurt
+    region: oregon
     buildCommand: echo "Building n8n..."
 
   - type: pserv
