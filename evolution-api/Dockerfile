@@ -1,36 +1,26 @@
-# evolution-api/Dockerfile
-# Dockerfile minimal, pensado para apps Node.js (Express / Fastify)
-# Assumimos que o projecto tem package.json com scripts: "start" e "build" se necessário.
+# -----------------------------
+# Dockerfile para Evolution API
+# -----------------------------
+FROM node:18-alpine
 
-FROM node:18-alpine AS builder
-WORKDIR /usr/src/app
+# Diretório de trabalho
+WORKDIR /app
 
-# Dependências de compilação (se houver)
+# Copia apenas ficheiros necessários
 COPY package*.json ./
-# Se usas pnpm/yarn ajusta aqui
-RUN npm ci --production
 
-# Copia código
+# Instala dependências (modo produção)
+RUN npm install --omit=dev
+
+# Copia o código fonte
 COPY . .
 
-# Se tens build step
-# RUN npm run build
-
-# --- imagem final ---
-FROM node:18-alpine
-WORKDIR /usr/src/app
-
-# Cria um user não-root (melhor segurança)
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
-
-# Copia node_modules e código do builder
-COPY --from=builder /usr/src/app /usr/src/app
-
+# Define variáveis padrão (Render substitui por env)
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Expõe a porta da API
 EXPOSE 3000
 
-# Start command (Render vai usar o startCommand do render.yaml)
+# Inicia a aplicação
 CMD ["npm", "run", "start"]
