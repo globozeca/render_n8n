@@ -8,9 +8,7 @@ services:
   # =============== Evolution API (Web) ===============
   - type: web
     name: evolution-api
-    # Se você tem Dockerfile próprio, mantenha 'env: docker' e 'dockerfilePath'.
-    # Caso contrário, troque para 'runtime: image' + image.url.
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     dockerfilePath: ./evolution-api/Dockerfile
@@ -23,17 +21,18 @@ services:
         value: production
 
       # Postgres externo (Supabase) - preencha no painel:
-      - key: DATABASE_URL              # ex.: postgres://user:pass@host:5432/dbname?sslmode=require
+      # Ex.: postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
+      - key: DATABASE_URL
         sync: false
 
-      # Redis/Key Value interno da Render (Valkey)
+      # Key Value (Valkey/Redis-compatível) interno da Render
       - key: REDIS_URL
         fromService:
           type: keyvalue
           name: redis
           property: connectionString
 
-      # Supabase (se a Evolution API também consome REST/Storage/Auth do Supabase)
+      # Supabase (se a Evolution API consome REST/Storage/Auth)
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
@@ -48,16 +47,15 @@ services:
   # =================== n8n (Web) ===================
   - type: web
     name: n8n
-    # Recomendada a imagem oficial. Se você tem Dockerfile próprio, mantenha env: docker.
-    # Abaixo, usando imagem oficial para simplificar o free tier:
     runtime: image
     image:
       url: docker.io/n8nio/n8n:latest
-      # Dica: para estabilidade, fixe a versão (ex.: 1.102.3) em vez de 'latest'.
+      # Dica: para estabilidade, fixe a versão (ex.: 1.102.3).
       # url: docker.io/n8nio/n8n:1.102.3
     plan: free
     region: oregon
     autoDeploy: true
+    healthCheckPath: /healthz
     envVars:
       # Porta exposta
       - key: PORT
@@ -92,16 +90,14 @@ services:
         sync: false
       - key: DB_POSTGRESDB_PASSWORD
         sync: false
-      # Se o seu projeto exigir SSL (Supabase geralmente exige):
+      # Supabase geralmente exige SSL:
       - key: DB_POSTGRESDB_SSL_ENABLED
         value: "true"
       - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
         value: "true"
 
-      # Redis (fila/cache) - apontando para Key Value interno
-      # Para usar fila do n8n ative também EXECUTIONS_MODE=queue (veja README):
-      # - key: EXECUTIONS_MODE
-      #   value: queue
+      # Redis (fila/cache) – Key Value interno
+      # Para usar fila do n8n, ative também EXECUTIONS_MODE=queue (ver README/observação).
       - key: QUEUE_BULL_REDIS_HOST
         fromService:
           type: keyvalue
@@ -117,7 +113,7 @@ services:
       - key: GENERIC_TIMEZONE
         value: Africa/Luanda
 
-      # Integrações usadas pelos seus fluxos (preencha no painel)
+      # Integrações usadas pelos seus fluxos (preencher no painel)
       - key: EVOLUTION_API_URL
         sync: false
       - key: SUPABASE_URL
@@ -127,15 +123,11 @@ services:
       - key: OPENAI_API_KEY
         sync: false
 
-    healthCheckPath: /healthz
-
   # =============== Key Value (Valkey/Redis-compatível) ===============
   - type: keyvalue
     name: redis
     plan: free
     region: oregon
     ipAllowList: []            # apenas tráfego interno da Render
-    # Para filas, 'noeviction' evita descarte de jobs quando estoura memória
+    # Para filas, 'noeviction' evita descarte de jobs quando a memória enche
     maxmemoryPolicy: noeviction
-    previews:
-      generation: off
