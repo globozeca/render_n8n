@@ -1,13 +1,10 @@
 # ==========================================================
 # STACK: n8n + Evolution API + PostgreSQL + Redis + Supabase
-# Ambiente: Render Free Tier (otimizado para uso contínuo)
-# Repo: zecaia-n8n-evolution
+# Ambiente: Render Free Tier (otimizado)
+# Repo: globozeca/render_n8n
 # ==========================================================
 
 services:
-  # -------------------------------
-  # EVOLUTION API
-  # -------------------------------
   - type: web
     name: evolution-api
     env: docker
@@ -19,10 +16,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromService:
-          type: pserv
-          name: postgres
-          property: connectionString
+        value: postgres://postgres:postgres@postgres:5432/postgres
       - key: REDIS_URL
         fromService:
           type: redis
@@ -31,21 +25,15 @@ services:
       - key: SUPABASE_URL
         value: https://tua-instancia.supabase.co
       - key: SUPABASE_KEY
-        value: "coloca_tua_supabase_key_aqui"
+        value: coloca_tua_supabase_key_aqui
       - key: API_KEY
-        value: "coloca_tua_chave_de_autenticacao_aqui"
+        value: coloca_tua_chave_de_autenticacao_aqui
       - key: ALLOWED_ORIGINS
         value: "*"
     autoDeploy: true
-    healthCheckPath: /
     region: frankfurt
-    buildCommand: |
-      echo "Building Evolution API..."
- 
+    buildCommand: echo "Building Evolution API..."
 
-  # -------------------------------
-  # N8N
-  # -------------------------------
   - type: web
     name: n8n
     env: docker
@@ -57,19 +45,15 @@ services:
       - key: WEBHOOK_URL
         value: https://n8n-zecaia-render.onrender.com
       - key: N8N_ENCRYPTION_KEY
-        value: "12345"
+        value: gera_uma_chave_segura_aqui
       - key: NODE_ENV
         value: production
-      - key: N8N_USER_MANAGEMENT_DISABLED
-        value: "true"
       - key: N8N_BASIC_AUTH_ACTIVE
         value: "true"
       - key: N8N_BASIC_AUTH_USER
-        value: "admin"
+        value: admin
       - key: N8N_BASIC_AUTH_PASSWORD
-        value: "admin"
-
-      # --- Base de Dados ---
+        value: coloca_uma_senha_segura_aqui
       - key: DB_TYPE
         value: postgresdb
       - key: DB_POSTGRESDB_HOST
@@ -85,36 +69,14 @@ services:
       - key: DB_POSTGRESDB_DATABASE
         value: n8n
       - key: DB_POSTGRESDB_USER
-        fromService:
-          type: pserv
-          name: postgres
-          property: user
+        value: postgres
       - key: DB_POSTGRESDB_PASSWORD
-        fromService:
-          type: pserv
-          name: postgres
-          property: password
-
-      # --- Redis (para filas e cache) ---
-      - key: QUEUE_BULL_REDIS_HOST
+        value: postgres
+      - key: REDIS_URL
         fromService:
           type: redis
           name: redis
-          property: host
-      - key: QUEUE_BULL_REDIS_PORT
-        fromService:
-          type: redis
-          name: redis
-          property: port
-      - key: QUEUE_BULL_REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: redis
-          property: password
-      - key: EXECUTIONS_PROCESS
-        value: main
-
-      # --- Outras Configurações ---
+          property: connectionString
       - key: GENERIC_TIMEZONE
         value: Africa/Luanda
       - key: EVOLUTION_API_URL
@@ -122,33 +84,20 @@ services:
       - key: SUPABASE_URL
         value: https://tua-instancia.supabase.co
       - key: SUPABASE_KEY
-        value: "coloca_tua_supabase_key_aqui"
+        value: coloca_tua_supabase_key_aqui
       - key: OPENAI_API_KEY
-        value: "coloca_tua_chave_openai_ou_outro_modelo_aqui"
+        value: coloca_tua_chave_openai_ou_outro_modelo_aqui
     autoDeploy: true
-    healthCheckPath: /
     region: frankfurt
-    buildCommand: |
-      echo "Building n8n..."
+    buildCommand: echo "Building n8n..."
 
-
-  # -------------------------------
-  # POSTGRES
-  # -------------------------------
   - type: pserv
     name: postgres
     env: docker
     plan: free
-    disk:
-      name: data
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 1
-    dockerfilePath: ./postgres/Dockerfile
 
-  # -------------------------------
-  # REDIS
-  # -------------------------------
   - type: redis
     name: redis
     plan: free
+    ipAllowList: []
     maxmemoryPolicy: allkeys-lru
