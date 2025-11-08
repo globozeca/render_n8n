@@ -5,6 +5,9 @@
 # ==========================================================
 
 services:
+  # -------------------------------
+  # EVOLUTION API
+  # -------------------------------
   - type: web
     name: evolution-api
     env: docker
@@ -37,10 +40,13 @@ services:
     healthCheckPath: /
     region: frankfurt
     buildCommand: |
-      echo "Starting Evolution API build..."
+      echo "Building Evolution API..."
     startCommand: |
       npm run start
 
+  # -------------------------------
+  # N8N
+  # -------------------------------
   - type: web
     name: n8n
     env: docker
@@ -52,7 +58,7 @@ services:
       - key: WEBHOOK_URL
         value: https://n8n-zecaia-render.onrender.com
       - key: N8N_ENCRYPTION_KEY
-        value: "gera_uma_chave_segura_aqui"
+        value: "12345"
       - key: NODE_ENV
         value: production
       - key: N8N_USER_MANAGEMENT_DISABLED
@@ -62,7 +68,9 @@ services:
       - key: N8N_BASIC_AUTH_USER
         value: "admin"
       - key: N8N_BASIC_AUTH_PASSWORD
-        value: "coloca_uma_senha_segura_aqui"
+        value: "admin"
+
+      # --- Base de Dados ---
       - key: DB_TYPE
         value: postgresdb
       - key: DB_POSTGRESDB_HOST
@@ -87,13 +95,27 @@ services:
           type: pserv
           name: postgres
           property: password
-      - key: REDIS_URL
+
+      # --- Redis (para filas e cache) ---
+      - key: QUEUE_BULL_REDIS_HOST
         fromService:
           type: redis
           name: redis
-          property: connectionString
+          property: host
+      - key: QUEUE_BULL_REDIS_PORT
+        fromService:
+          type: redis
+          name: redis
+          property: port
+      - key: QUEUE_BULL_REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: redis
+          property: password
       - key: EXECUTIONS_PROCESS
         value: main
+
+      # --- Outras Configurações ---
       - key: GENERIC_TIMEZONE
         value: Africa/Luanda
       - key: EVOLUTION_API_URL
@@ -110,8 +132,11 @@ services:
     buildCommand: |
       echo "Building n8n..."
     startCommand: |
-      n8n start
+      n8n start --tunnel
 
+  # -------------------------------
+  # POSTGRES
+  # -------------------------------
   - type: pserv
     name: postgres
     env: docker
@@ -120,7 +145,11 @@ services:
       name: data
       mountPath: /var/lib/postgresql/data
       sizeGB: 1
+    dockerfilePath: ./postgres/Dockerfile
 
+  # -------------------------------
+  # REDIS
+  # -------------------------------
   - type: redis
     name: redis
     plan: free
