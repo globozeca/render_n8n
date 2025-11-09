@@ -13,12 +13,16 @@ services:
     region: oregon
     dockerfilePath: ./evolution-api/Dockerfile
     buildCommand: echo "Building Evolution API..."
-    autoDeploy: true
     envVars:
       - key: PORT
         value: "3000"
       - key: NODE_ENV
         value: production
+      # Se sua API usa variáveis adicionais (tokens, chaves), adicione abaixo:
+      # - key: API_KEY
+      #   sync: false
+    healthCheckPath: /health    # ajuste se sua API não tiver /health
+    autoDeploy: true
 
       # Postgres externo (Supabase) - preencha no painel:
       # Ex.: postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
