@@ -7,7 +7,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copia apenas ficheiros necessários
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
 # Instala dependências (modo produção)
 RUN npm install --omit=dev
