@@ -15,6 +15,7 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200);
 });
 
+// CORRETO: usar const para a porta
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Evolution API online na porta ${port}`);
