@@ -5,7 +5,7 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY evolution-api/package*.json ./
 
 # Usar npm install porque o projeto não tem package-lock.json
 RUN npm install --omit=dev --ignore-scripts --no-audit --no-fund
