@@ -1,6 +1,6 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
 
 const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGINS || '*' }));
@@ -15,7 +15,7 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200);
 });
 
-const port = process.env.PORT || 3000;
+import port from process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Evolution API online na porta ${port}`);
 });
