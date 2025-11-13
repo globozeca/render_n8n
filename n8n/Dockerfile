@@ -7,7 +7,7 @@ WORKDIR /data
 
 ENV GENERIC_TIMEZONE=Africa/Luanda
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--max-old-space-size=256"
+ENV NODE_OPTIONS="--max-old-space-size=384"
 
 EXPOSE 5678
 
