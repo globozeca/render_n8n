@@ -2,7 +2,7 @@
   "name": "evolution-api",
   "version": "1.0.0",
   "description": "Stub Evolution API lightweight for Render deploy (simulated endpoints)",
-  "main": "server.js",
+  "main": "evolution-api/server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
