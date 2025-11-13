@@ -1,28 +1,36 @@
-# -----------------------------
-# Dockerfile: Evolution API + Redis interno (Render Free) sem arquivos externos
-# -----------------------------
+# ----------------------------------------------------------
+# Evolution API - Dockerfile otimizado para Render Free Tier
+# ----------------------------------------------------------
 FROM node:18-alpine
 
 WORKDIR /app
 
+# ===========================================
+# Variáveis de ambiente padrão
+# ===========================================
 ENV NODE_ENV=production \
     PORT=3000 \
     REDIS_HOST=127.0.0.1 \
-    REDIS_PORT=6379
+    REDIS_PORT=6379 \
+    NODE_OPTIONS="--max-old-space-size=256 --optimize_for_size --max_semi_space_size=4"
 
-# Instala redis, curl e sh
-RUN apk add --no-cache redis curl bash
+# ===========================================
+# Instalar somente o necessário
+# ===========================================
+RUN apk add --no-cache redis bash curl tini
 
-# Copia manifestos e instala dependências de produção
+# ===========================================
+# Instalar dependências da aplicação
+# ===========================================
 COPY package*.json ./
-# Se você tiver package-lock.json versionado, pode trocar para npm ci:
-# RUN npm ci --omit=dev --no-audit --no-fund
-RUN npm install --omit=dev --no-audit --no-fund
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
-# Copia o restante do código da aplicação
+# Copiar código
 COPY . .
 
-# --- Cria redis.conf dentro da imagem ---
+# ===========================================
+# Criar redis.conf otimizado
+# ===========================================
 RUN cat > /app/redis.conf <<'EOF'
 port 6379
 bind 127.0.0.1
@@ -32,70 +40,51 @@ save ""
 appendonly no
 dir /app/redis-data
 logfile ""
-# Descomente para limitar memória no free tier:
-# maxmemory 128mb
-# maxmemory-policy allkeys-lru
+# Mantém baixo uso de RAM
+maxmemory 64mb
+maxmemory-policy allkeys-lru
 EOF
 
-# --- Cria entrypoint.sh dentro da imagem ---
+# ===========================================
+# Criar entrypoint.sh mais leve e seguro
+# ===========================================
 RUN cat > /app/entrypoint.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
 _term() {
-  echo "Recebido sinal, encerrando..."
-  if [ -n "${API_PID:-}" ] && kill -0 "$API_PID" 2>/dev/null; then
-    kill -TERM "$API_PID" || true
-  fi
-  if [ -n "${REDIS_PID:-}" ] && kill -0 "$REDIS_PID" 2>/dev/null; then
-    redis-cli -h 127.0.0.1 -p 6379 shutdown nosave || kill -TERM "$REDIS_PID" || true
-  fi
+  echo "Finalizando serviços..."
+  [ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null || true
+  [ -n "${REDIS_PID:-}" ] && redis-cli -h 127.0.0.1 -p 6379 shutdown nosave || true
   wait || true
   exit 0
 }
 trap _term TERM INT
 
-echo "Iniciando Redis local..."
+echo "[1/3] Iniciando Redis..."
 redis-server /app/redis.conf &
 REDIS_PID=$!
 
-echo "Aguardando Redis responder PING..."
-for i in $(seq 1 30); do
-  if redis-cli -h 127.0.0.1 -p 6379 ping | grep -q PONG; then
-    echo "Redis pronto."
-    break
-  fi
+echo "[2/3] Aguardando Redis..."
+for i in {1..20}; do
+  redis-cli ping > /dev/null 2>&1 && break
   sleep 1
-  if ! kill -0 "$REDIS_PID" 2>/dev/null; then
-    echo "Redis terminou inesperadamente."; exit 1
-  fi
-  if [ "$i" -eq 30 ]; then
-    echo "Timeout esperando Redis."; exit 1
-  fi
 done
 
-echo "Iniciando Evolution API..."
+echo "[3/3] Iniciando Evolution API..."
 npm run start &
 API_PID=$!
 
 wait -n || true
-# Se um morrer, encerra o outro para reinício limpo
 _term
 EOF
 
-# Permissões e diretório de dados
+# Permissões e diretórios
 RUN mkdir -p /app/redis-data && \
-    chown -R node:node /app && \
     chmod +x /app/entrypoint.sh
 
-# Rodar como usuário não-root
 USER node
 
 EXPOSE 3000
 
-# Healthcheck HTTP (+ opcional) — ajuste /health se necessário
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD sh -c 'curl -fsS http://127.0.0.1:${PORT}/health || curl -fsS http://127.0.0.1:${PORT}/ || exit 1' && \
-      sh -c 'redis-cli -h 127.0.0.1 -p 6379 ping | grep -q PONG || exit 1'
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/sbin/tini","--","/app/entrypoint.sh"]
