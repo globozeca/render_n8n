@@ -1,90 +1,38 @@
-# ----------------------------------------------------------
-# Evolution API - Dockerfile otimizado para Render Free Tier
-# ----------------------------------------------------------
+# ------------------------------------------------------
+# Evolution API - Dockerfile para Render (Free Tier)
+# Optimizado e sem erros NODE_OPTIONS
+# ------------------------------------------------------
+
+# Reset ao NODE_OPTIONS (Render injecta variáveis no build)
+ARG NODE_OPTIONS=""
+
 FROM node:18-alpine
 
+# Workdir
 WORKDIR /app
 
-# ===========================================
-# Variáveis de ambiente padrão
-# ===========================================
-ENV NODE_ENV=production \
-    PORT=3000 \
-    REDIS_HOST=127.0.0.1 \
-    REDIS_PORT=6379 \
-    NODE_OPTIONS="--max-old-space-size=256 --optimize_for_size --max_semi_space_size=4"
-
-# ===========================================
-# Instalar somente o necessário
-# ===========================================
-RUN apk add --no-cache redis bash curl tini
-
-# ===========================================
-# Instalar dependências da aplicação
-# ===========================================
+# Copiar definições
 COPY package*.json ./
+
+# Instalar só produção
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
-# Copiar código
+# Copiar resto do código
 COPY . .
 
-# ===========================================
-# Criar redis.conf otimizado
-# ===========================================
-RUN cat > /app/redis.conf <<'EOF'
-port 6379
-bind 127.0.0.1
-protected-mode yes
-daemonize no
-save ""
-appendonly no
-dir /app/redis-data
-logfile ""
-# Mantém baixo uso de RAM
-maxmemory 64mb
-maxmemory-policy allkeys-lru
-EOF
+# Variáveis de performance para produção
+ENV NODE_ENV=production
+ENV TZ=Africa/Luanda
 
-# ===========================================
-# Criar entrypoint.sh mais leve e seguro
-# ===========================================
-RUN cat > /app/entrypoint.sh <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
+# Desactivar logs pesados
+ENV LOG_LEVEL=warn
 
-_term() {
-  echo "Finalizando serviços..."
-  [ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null || true
-  [ -n "${REDIS_PID:-}" ] && redis-cli -h 127.0.0.1 -p 6379 shutdown nosave || true
-  wait || true
-  exit 0
-}
-trap _term TERM INT
+# Optimizar memória para Render (512 MB máx)
+ENV EVOLUTION_MAX_CONNECTIONS=50
+ENV EVOLUTION_MAX_PAYLOAD=2mb
 
-echo "[1/3] Iniciando Redis..."
-redis-server /app/redis.conf &
-REDIS_PID=$!
+# Expor porta
+EXPOSE 8080
 
-echo "[2/3] Aguardando Redis..."
-for i in {1..20}; do
-  redis-cli ping > /dev/null 2>&1 && break
-  sleep 1
-done
-
-echo "[3/3] Iniciando Evolution API..."
-npm run start &
-API_PID=$!
-
-wait -n || true
-_term
-EOF
-
-# Permissões e diretórios
-RUN mkdir -p /app/redis-data && \
-    chmod +x /app/entrypoint.sh
-
-USER node
-
-EXPOSE 3000
-
-ENTRYPOINT ["/sbin/tini","--","/app/entrypoint.sh"]
+# Iniciar
+CMD ["npm", "start"]
