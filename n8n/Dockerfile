@@ -7,7 +7,6 @@ WORKDIR /data
 
 ENV GENERIC_TIMEZONE=Africa/Luanda
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--max-old-space-size=384"
 ENV NODE_OPTIONS=--max-old-space-size=384
 ENV N8N_RUNNERS_ENABLED=false
 ENV N8N_TEMPLATES_ENABLED=false
