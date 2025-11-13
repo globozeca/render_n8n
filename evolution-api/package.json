@@ -5,8 +5,8 @@
   "main": "evolution-api/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node evolution-api/server.js",
+    "dev": "nodemon evolution-api/server.js"
   },
   "dependencies": {
     "body-parser": "latest",
