@@ -15,7 +15,7 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200);
 });
 
-import port from process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Evolution API online na porta ${port}`);
 });
