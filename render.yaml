@@ -1,79 +1,79 @@
 # ==========================================================
-# STACK: n8n + Evolution API + Supabase (Postgres externo) + Key Value (Redis-compatível)
-# Ambiente: Render Free Tier (otimizado)
+# STACK: n8n + Evolution API + Supabase + Redis (Render Free)
 # Repo: globozeca/render_n8n
 # ==========================================================
 
 services:
-  # =============== Evolution API (Web) ===============
+
+  # ========================================================
+  # Evolution API
+  # ========================================================
   - type: web
     name: evolution-api
     runtime: docker
     plan: free
     region: oregon
     dockerfilePath: ./evolution-api/Dockerfile
-    buildCommand: echo "Building Evolution API..."
+    autoDeploy: true
+    healthCheckPath: /health
+
     envVars:
       - key: PORT
         value: "3000"
       - key: NODE_ENV
         value: production
-      # Se sua API usa variáveis adicionais (tokens, chaves), adicione abaixo:
-      # - key: API_KEY
-      #   sync: false
-    healthCheckPath: /health    # ajuste se sua API não tiver /health
-    autoDeploy: true
 
-      # Postgres externo (Supabase) - preencha no painel:
-      # Ex.: postgres://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
+      # Banco: Supabase (preencher no painel)
       - key: DATABASE_URL
         sync: false
 
-      # Key Value (Valkey/Redis-compatível) interno da Render
+      # Redis interno
       - key: REDIS_URL
         fromService:
           type: keyvalue
           name: redis
           property: connectionString
 
-      # Supabase (se a Evolution API consome REST/Storage/Auth)
+      # Segurança da Evolution API
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+
+      # Supabase REST (se usar Storage/Auth)
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
         sync: false
 
-      # Outras chaves/filtros
-      - key: API_KEY
-        sync: false
+      # CORS
       - key: ALLOWED_ORIGINS
         value: "*"
 
-  # =================== n8n (Web) ===================
+  # ========================================================
+  # n8n
+  # ========================================================
   - type: web
     name: n8n
     runtime: image
     image:
       url: docker.io/n8nio/n8n:latest
-      # Dica: para estabilidade, fixe a versão (ex.: 1.102.3).
-      # url: docker.io/n8nio/n8n:1.102.3
     plan: free
     region: oregon
-    autoDeploy: true
     healthCheckPath: /healthz
+    autoDeploy: true
+
     envVars:
-      # Porta exposta
+
+      # Porta
       - key: PORT
         value: "5678"
 
-      # URL pública (ajuste se usar domínio próprio)
+      # URL pública
       - key: WEBHOOK_URL
         sync: false
 
-      # Segurança / autenticação (preencha no painel)
-      - key: N8N_ENCRYPTION_KEY
-        sync: false
-      - key: NODE_ENV
-        value: production
+      # Autenticação
       - key: N8N_BASIC_AUTH_ACTIVE
         value: "true"
       - key: N8N_BASIC_AUTH_USER
@@ -81,11 +81,28 @@ services:
       - key: N8N_BASIC_AUTH_PASSWORD
         sync: false
 
-      # Banco: Supabase (Postgres externo)
+      - key: N8N_ENCRYPTION_KEY
+        sync: false
+
+      - key: NODE_ENV
+        value: production
+
+      # Otimização de memória (Render Free)
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=320"
+      - key: N8N_RUNNERS_ENABLED
+        value: "false"
+      - key: EXECUTIONS_PROCESS
+        value: main
+
+      - key: GENERIC_TIMEZONE
+        value: Africa/Luanda
+
+      # Banco — Supabase Pooler
       - key: DB_TYPE
         value: postgresdb
       - key: DB_POSTGRESDB_HOST
-        sync: false            # ex.: db.xxxxx.supabase.co (ou host do pooler)
+        sync: false
       - key: DB_POSTGRESDB_PORT
         value: "5432"
       - key: DB_POSTGRESDB_DATABASE
@@ -94,14 +111,12 @@ services:
         sync: false
       - key: DB_POSTGRESDB_PASSWORD
         sync: false
-      # Supabase geralmente exige SSL:
       - key: DB_POSTGRESDB_SSL_ENABLED
         value: "true"
       - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
-        value: "true"
+        value: "false"
 
-      # Redis (fila/cache) – Key Value interno
-      # Para usar fila do n8n, ative também EXECUTIONS_MODE=queue (ver README/observação).
+      # Redis — ENQUANTO NÃO ATIVARES MODO FILA
       - key: QUEUE_BULL_REDIS_HOST
         fromService:
           type: keyvalue
@@ -113,11 +128,7 @@ services:
           name: redis
           property: port
 
-      # Fuso horário
-      - key: GENERIC_TIMEZONE
-        value: Africa/Luanda
-
-      # Integrações usadas pelos seus fluxos (preencher no painel)
+      # Integrações
       - key: EVOLUTION_API_URL
         sync: false
       - key: SUPABASE_URL
@@ -127,11 +138,12 @@ services:
       - key: OPENAI_API_KEY
         sync: false
 
-  # =============== Key Value (Valkey/Redis-compatível) ===============
+  # ========================================================
+  # Redis interno (KeyValue)
+  # ========================================================
   - type: keyvalue
     name: redis
     plan: free
     region: oregon
-    ipAllowList: []            # apenas tráfego interno da Render
-    # Para filas, 'noeviction' evita descarte de jobs quando a memória enche
+    ipAllowList: []
     maxmemoryPolicy: noeviction
