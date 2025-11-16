@@ -91,9 +91,7 @@ services:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=320"
       - key: N8N_RUNNERS_ENABLED
-        value: "false"
-      - key: EXECUTIONS_PROCESS
-        value: main
+        value: "true"
 
       - key: GENERIC_TIMEZONE
         value: Africa/Luanda
